@@ -16,12 +16,37 @@ public class BackgroundMusicUtil {
         play();
     }
     public static void changetomusic(int musicnumber){
-        FadeInUtil.volumeGradient(bgmediaplayer, 0.5f, 0f, new MusicDoneCallBack() {
+       /* FadeInUtil.volumeGradient(bgmediaplayer, 0.5f, 0f, new MusicDoneCallBack() {
             @Override
             public void onComplete() {
                 bgmediaplayer.reset();
                 bgnumber = musicnumber;
                 play();
+            }
+        });*/
+        FadeInUtil.volumeGradient(bgmediaplayer, 0.5f, 0f, new MusicDoneCallBack() {
+            @Override
+            public void onComplete() {
+                bgmediaplayer.reset();
+                fullbgfilename = bgfilename+musicnumber+".mp3";
+                Log.e("TAG", fullbgfilename);
+                try {
+                    bgmediaplayer.setDataSource(fullbgfilename);
+                    bgmediaplayer.prepare();
+                    bgmediaplayer.start();
+                    bgmediaplayer.setVolume(0.5f, 0.5f);
+                    bgmediaplayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                        @Override
+                        public void onCompletion(MediaPlayer mp) {
+                            bgmediaplayer.reset();
+                            bgnumber++;
+                            play();
+                        }
+                    });
+                }catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
             }
         });
     }

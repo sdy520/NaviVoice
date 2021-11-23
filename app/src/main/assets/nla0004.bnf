@@ -1,5 +1,5 @@
 #BNF+IAT 1.0 UTF-8;
-!grammar nla0005;
+!grammar nla0004;
 !slot <callCmd>;
 !slot <contact>;
 !start <callStart>;

@@ -60,6 +60,7 @@ import org.jaudiotagger.audio.mp3.MP3AudioHeader;
 import org.jaudiotagger.audio.mp3.MP3File;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -73,7 +74,8 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
     String posPath = "/storage/emulated/0/voice/pos/";
     String nonPath = "/storage/emulated/0/voice/nonpos/";
     AMapNavi aMapNavi;
-    private static MediaPlayer mediaPlayer=new MediaPlayer();;
+    private static MediaPlayer mediaPlayer=new MediaPlayer();
+    MediaPlayer smallPosMediaPlayer=new MediaPlayer();
     double car_longitude;
     double car_latitude;
     float car_speed;
@@ -92,11 +94,11 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
     //保存所有景点的位置相关信息
     //ArrayList<PosSite> posSiteArrayList;
     ArrayList<Pos> posSiteArrayList;
+    ArrayList<Pos> posSmallArrayList;
     //保存相近景点的位置相关信息
     ArrayList<PosSite> nearPosSiteArrayList;
     static String[] nonPosArrayList;
-    String[] nonPosQuesArrayList = new String[]{"nla0005","nla0012","nlg01","nlg02","nlg03","nlg05","nlg08","nlg09","nlg10"};
-
+    String[] nonPosQuesArrayList = new String[]{"nla0004","nla0012","nla0013","nla0014","nla0015","nlg01","nlg02","nlg03","nlg05","nlg08","nlg09","nlg10"};
     //初始化音频管理器
     private AudioManager mAudioManager;
     //唤醒识别类
@@ -135,17 +137,20 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
         GetPosSite();
         //启动背景音乐
         BackgroundMusicUtil.bgstart();
+        //初始化音频管理器
+        mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         // 创建一个AMapNavi导航对象。
         aMapNavi = AMapNavi.getInstance(getApplicationContext());
         //mediaPlayer = new MediaPlayer();
-        //初始化音频管理器
-        mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        //起点103.275513,36.700753,103.365014,36.619903
+
+        //起点103.40433,36.444996测试小景点
+        //Poi start = new Poi("起点", new LatLng(36.444996,103.40433),null);
         Poi start = new Poi("起点", new LatLng(36.489411,103.61449),null);
         //Poi start = new Poi("起点", new LatLng(36.874387,103.187258),null);
         //Poi start = new Poi("起点", new LatLng(36.911395,103.15939),null);
-        //终点
+        //终点天柱103.166964,36.890526
         Poi end = new Poi("终点", new LatLng(37.941925, 102.638239),null);
+        //Poi end = new Poi("终点", new LatLng(36.890526,103.166964),null);
         // 组件参数配置
         AmapNaviParams params = new AmapNaviParams(start, null, end, AmapNaviType.DRIVER, AmapPageType.ROUTE);
         //设置播报模式 3-静音模式
@@ -202,12 +207,18 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
         mAsrQuestion.setParameter(ResourceUtil.ASR_RES_PATH, ResourceUtil.generateResourcePath(this, ResourceUtil.RESOURCE_TYPE.assets, "asr/common.jet"));
     }
 
+    /*获取地标分为两类，一类可以打断非景点语音，一类不会打断
+     * GetPosSite()打断非景点语音
+     * GetSmallPosSite()一类不会打断,另起一个mediaplay播放
+     * */
     private void GetPosSite() {
         posDao = PosDatabase.getDatabase(this).getPosDao();
         new Thread(() -> {
             //posSiteArrayList = (ArrayList<PosSite>) posDao.getAllPosSite();
             posSiteArrayList = (ArrayList<Pos>) posDao.getAllPos();
+            posSmallArrayList = (ArrayList<Pos>) posDao.getAllSmallPos();
             Log.e(TAG, String.valueOf(posSiteArrayList));
+            Log.e(TAG, String.valueOf(posSmallArrayList));
             //Log.e(TAG, String.valueOf(pos));
         }).start();
     }
@@ -221,10 +232,12 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
     public void onGetNavigationText(String s) {
 
     }
+    //必播区域语音数
     static int nonPosVoiceNumber;
+    //必播公共语音数
     static int nonPublicPosVoiceNumber;
     //可以用数组存储地区是否初始化
-    boolean[] areas = {true,true,true};
+    boolean[] areas = {true,true,true,true};
     Boolean initArrayList =true;
     static int nonPosArrayList_index;
     //控制全局公共讲几个，初始化
@@ -287,20 +300,39 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
             Log.e(TAG, "进入兰州 ");
             nonPosArrayList = APPCONST.lanzhounonPosArrayList;
             nonPosPath = APPCONST.lanzhouNonPosPath;
-            nonPosVoiceNumber = 10;
-            nonPublicPosVoiceNumber = 3;
+            nonPosVoiceNumber = 10;//播放11个
+            nonPublicPosVoiceNumber = 3;//播放3个
             nonPosArrayList_index = 0;
             allpublic =0;
             areas[0] = false;
-        }else if(areas[1] && cityCode.equals("1935")){
-            Log.e(TAG, "进入武威 ");
-            nonPosArrayList = APPCONST.wuweinonPosArrayList;
-            nonPosPath = APPCONST.wuweiNonPosPath;
-            nonPosVoiceNumber = 9;
-            nonPublicPosVoiceNumber = 3;
+        }else if(areas[1] && adCode.equals("620623")){
+            Log.e(TAG, "进入天祝 ");
+            nonPosArrayList = APPCONST.tianzhunonPosArrayList;
+            nonPosPath = APPCONST.tianzhuNonPosPath;
+            nonPosVoiceNumber = 1;
+            nonPublicPosVoiceNumber = 2;
             nonPosArrayList_index = 0;
             allpublic =0;
             areas[1] = false;
+        }else if(areas[2] && adCode.equals("620622")){
+            Log.e(TAG, "进入古浪 ");
+            nonPosArrayList = APPCONST.gulangnonPosArrayList;
+            nonPosPath = APPCONST.gulangNonPosPath;
+            nonPosVoiceNumber = 0;
+            nonPublicPosVoiceNumber = 3;
+            nonPosArrayList_index = 0;
+            allpublic =0;
+            areas[2] = false;
+            //武威除古浪和天祝之外的地方
+        }else if(areas[3] && (adCode.equals("620600")||adCode.equals("620601")||adCode.equals("620602")||adCode.equals("620621"))){
+            Log.e(TAG, "进入凉州（武威）");
+            nonPosArrayList = APPCONST.wuweinonPosArrayList;
+            nonPosPath = APPCONST.wuweiNonPosPath;
+            nonPosVoiceNumber = 9;
+            nonPublicPosVoiceNumber = 2;
+            nonPosArrayList_index = 0;
+            allpublic =0;
+            areas[3] = false;
         }
     }
 
@@ -369,6 +401,8 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
     String noPublicPosPath;
     //全局公共内容音乐数组下标
     int nonPosPublicArrayList_index;
+    Boolean onlyOnceQuestionFlag = false;
+    Boolean smallPosMediaplayerFlag = true;
     private void SpotTrigger() {
         ArrayList<Pos> posSiteNear = GetNearPos(car_latitude);
         //Log.e(TAG, posSiteNear.toString());
@@ -379,6 +413,10 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
             //判断两个景点那个优先级高，播放高优先级的
 
             if(mediaPlayer.isPlaying() && posflag && allMediaPlayerFlag){
+                //播放问题后只有再播放景点音乐才能让问题语音可能再次触发
+                //控制问题只播放一个
+                /*if(!queue.isEmpty())
+                    onlyOnceQuestionFlag = true;*/
                 //if(posflag && allMediaPlayerFlag){
                 posflag = false;
                 FadeInUtil.volumeGradient(mediaPlayer, 1f, 0f, new MusicDoneCallBack() {
@@ -388,11 +426,11 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
                         Log.e(TAG, 1+PosPath);
                         playMediaPlayer(PosPath);
                         //景点播放过后就移除，不再再次播放，看后续需求
-                        posSiteNear.get(0).setAttraction_flag(1);
+                        //posSiteNear.get(0).setAttraction_flag(1);
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
-                                posDao.updatePos(posSiteNear.get(0));
+                                //posDao.updatePos(posSiteNear.get(0));
                                 posSiteArrayList.remove(posSiteNear.get(0));
                             }
                         }).start();
@@ -408,16 +446,20 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
             }
             //没有语言播放的境况下进入景点
             else if(posflag && allMediaPlayerFlag){
+                //播放问题后只有再播放景点音乐才能让问题语音可能再次触发
+                //控制问题只播放一个
+                /*if(!queue.isEmpty())
+                    onlyOnceQuestionFlag = true;*/
                 posflag = false;
                 String PosPath = posPath + posSiteNear.get(0).getVoice_name() + ".mp3";
                 Log.e(TAG, 2+PosPath);
                 playMediaPlayer(PosPath);
                 //景点播放过后就移除，不再再次播放，看后续需求
-                posSiteNear.get(0).setAttraction_flag(1);
+                //posSiteNear.get(0).setAttraction_flag(1);
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        posDao.updatePos(posSiteNear.get(0));
+                        //posDao.updatePos(posSiteNear.get(0));
                         posSiteArrayList.remove(posSiteNear.get(0));
                     }
                 }).start();
@@ -474,7 +516,11 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
                 musicPublicDuration = getMusicDuration(nextNoPublicPosPath);
                 toNextPublicPosTime = (distance-(posSiteNear.get(0).getRadius()/1000.0))/car_speed*3600;
             }*/
-            if(!mediaPlayer.isPlaying() && allMediaPlayerFlag && nonPosArrayList_index >nonPosVoiceNumber && allpublic < nonPublicPosVoiceNumber && toNextPublicPosTime > musicPublicDuration && nonPosPublicArrayList_index < APPCONST.nonPublicPosArrayList.length)
+            if(smallPosMediaplayerFlag && !mediaPlayer.isPlaying() && allMediaPlayerFlag && (!queue.isEmpty())){
+                Log.e(TAG, "SpotTrig   30 ");
+                exec.execute(new ThreadShow(0));
+            }
+            else if(smallPosMediaplayerFlag &&!mediaPlayer.isPlaying() && allMediaPlayerFlag && nonPosArrayList_index >nonPosVoiceNumber && allpublic < nonPublicPosVoiceNumber && toNextPublicPosTime > musicPublicDuration && nonPosPublicArrayList_index < APPCONST.nonPublicPosArrayList.length)
             {
                 allpublic++;
                 Log.e(TAG, noPublicPosPath);
@@ -504,19 +550,17 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
                             Log.e(TAG, String.valueOf(queue));
                             //exec.execute(new ThreadShow(30000));
                         }*/
-                        int temp_nonPosPublicArrayList_index = nonPosPublicArrayList_index -1;
+                        /*int temp_nonPosPublicArrayList_index = nonPosPublicArrayList_index -1;
                         String temp_noPublicPosName= APPCONST.nonPublicPosArrayList[temp_nonPosPublicArrayList_index];
                         if(useLoop(nonPosQuesArrayList,temp_noPublicPosName)) {
                             Log.e(TAG, temp_noPublicPosName);
                             exec.execute(new ThreadShow(30000));
-                        }
+                        }*/
                     }
                 });
 
-
             }
-            else if(!mediaPlayer.isPlaying() && allMediaPlayerFlag && toNextPosTime > musicDuration && nonPosArrayList_index<nonPosArrayList.length){
-
+            else if(smallPosMediaplayerFlag && !mediaPlayer.isPlaying() && allMediaPlayerFlag && toNextPosTime > musicDuration && nonPosArrayList_index<nonPosArrayList.length){
                 Log.e(TAG, noPosPath);
                 playMediaPlayer(noPosPath);
                 if(useLoop(nonPosQuesArrayList,noPosName)) {
@@ -540,14 +584,14 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
                             //exec.execute(new ThreadShow(30000));
                         }*/
                         //不进行判断则区域转换时可能出现数组错误
-                        if(nonPosArrayList_index!=0) {
+                       /* if(nonPosArrayList_index!=0) {
                             int temp_nonPosArrayList_index = nonPosArrayList_index - 1;
                             String temp_noPosName = nonPosArrayList[temp_nonPosArrayList_index];
                             if (useLoop(nonPosQuesArrayList, temp_noPosName)) {
                                 Log.e(TAG, temp_noPosName);
                                 exec.execute(new ThreadShow(30000));
                             }
-                        }
+                        }*/
                     }
                 });
 
@@ -558,14 +602,119 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
                 /*if(nonPosArrayList_index==nonPosArrayList.length-1)
                     BackgroundMusicUtil.changevolume(1f,1f);*/
             }
+            //else if(!mediaPlayer.isPlaying() && toNextPosTime >30 && onlyOnceQuestionFlag){
+         /*   else if(!mediaPlayer.isPlaying()){
+                Log.e(TAG, "SpotTrig   30 ");
+                if(!queue.isEmpty()){
+                    exec.execute(new ThreadShow(0));
+                    //onlyOnceQuestionFlag = false;
+                }
+            }*/
+            /*else if(!mediaPlayer.isPlaying()){
+                Log.e(TAG, "SpotTrigger: "+ (int) toNextPosTime +"public"+(int)toNextPublicPosTime );
+            }*/
             /*else if(!queue.isEmpty() && !mediaPlayer.isPlaying() && allMediaPlayerFlag && toNextPosTime > 25){
                 //可能出现集中播放问题，解决。。。
                 exec.execute(new ThreadShow(2000));
             }*/
             //不是上面的情况
             // else if(!mediaPlayer.isPlaying() && allMediaPlayerFlag)
+
+            //小景点播放逻辑
+            smallPosTrigger();
         }
 
+    }
+    //小景点播放逻辑 同时播放，一个声音小一个大
+/*    private void smallPosTrigger(){
+        Pos nearSmallPos = GetNearSmallPos(car_latitude);
+        if(nearSmallPos!=null){
+            double distanceSmallPos = getDistance(car_longitude,car_latitude,nearSmallPos.getLongitude(),nearSmallPos.getLatitude());
+            if(distanceSmallPos*1000 <= nearSmallPos.getRadius()){
+                String smallPosPath = posPath + nearSmallPos.getVoice_name() + ".mp3";
+                Log.e(TAG, "small"+smallPosPath);
+                //BackgroundMusicUtil.changevolume(0f,0f);
+
+                mediaPlayer.setVolume(0.2f,0.2f);
+                smallPosMediaPlayer.reset();
+                try {
+                    smallPosMediaPlayer.setDataSource(smallPosPath);
+                    smallPosMediaPlayer.prepare();
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+                smallPosMediaPlayer.start();
+                smallPosMediaPlayer.setVolume(1f,1f);
+                smallPosMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mp) {
+                        //BackgroundMusicUtil.changevolume(0.5f,0.5f);
+                        mediaPlayer.setVolume(1f,1f);
+                    }
+                });
+                //景点播放过后就移除，不再再次播放，看后续需求
+                // posSiteNear.get(0).setAttraction_flag(1);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        //posDao.updatePos(posSiteNear.get(0));
+                        posSmallArrayList.remove(nearSmallPos);
+                    }
+                }).start();
+            }
+        }
+    }*/
+
+    //小景点播放逻辑
+    private void smallPosTrigger(){
+        Pos nearSmallPos = GetNearSmallPos(car_latitude);
+        if(nearSmallPos!=null){
+            double distanceSmallPos = getDistance(car_longitude,car_latitude,nearSmallPos.getLongitude(),nearSmallPos.getLatitude());
+            if(distanceSmallPos*1000 <= nearSmallPos.getRadius()){
+                //小景点时暂停mediaPlayer，不让别的mediaPlayer打断（大小景点不会很近，所以大景点的mediaPlayer也不会打断）
+                smallPosMediaplayerFlag = false;
+                String smallPosPath = posPath + nearSmallPos.getVoice_name() + ".mp3";
+                Log.e(TAG, "small"+smallPosPath);
+                //BackgroundMusicUtil.changevolume(0f,0f);
+                //可能会刚好结束的时候调用，导致再调用mediaPlayer.start()重复播放一遍，可以分情况mediaPlayer.isplaying()判断。
+                FadeInUtil.volumeGradient(mediaPlayer, 1f, 0f, new MusicDoneCallBack() {
+                    @Override
+                    public void onComplete() {
+                        mediaPlayer.pause();
+                        smallPosMediaPlayer.reset();
+                        try {
+                            smallPosMediaPlayer.setDataSource(smallPosPath);
+                            smallPosMediaPlayer.prepare();
+                        } catch (IOException ioException) {
+                            ioException.printStackTrace();
+                        }
+                        smallPosMediaPlayer.start();
+                        smallPosMediaPlayer.setVolume(1f,1f);
+                        smallPosMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                            @Override
+                            public void onCompletion(MediaPlayer mp) {
+                                mediaPlayer.start();
+                                smallPosMediaplayerFlag = true;
+                                FadeInUtil.volumeGradient(mediaPlayer, 0f, 1f, new MusicDoneCallBack() {
+                                    @Override
+                                    public void onComplete() {
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+                //景点播放过后就移除，不再再次播放，看后续需求
+                // posSiteNear.get(0).setAttraction_flag(1);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        //posDao.updatePos(posSiteNear.get(0));
+                        posSmallArrayList.remove(nearSmallPos);
+                    }
+                }).start();
+            }
+        }
     }
    /* private void SpotTrigger() {
         nearPosSiteArrayList = GetNearPosSite(car_latitude);
@@ -694,7 +843,7 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
                 Log.e(TAG, String.valueOf(posflag));
                 if(posflag){
                     allMediaPlayerFlag = false;//后续根据需求逻辑看这个放在那
-                    BackgroundMusicUtil.changetomusic(11);
+                    BackgroundMusicUtil.changetomusic(13);
                     FadeInUtil.volumeGradient(mediaPlayer, 1f, 0f, new MusicDoneCallBack() {
                         @Override
                         public void onComplete() {
@@ -998,7 +1147,7 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
         }
         return posSites;
     }*/
-
+//划分区域之后的景点可能轮询也很快
     public ArrayList<Pos> GetNearPos(Double latitude){
         ArrayList<Pos> posSites = new ArrayList<>();
         int tempNumber = 0;
@@ -1015,6 +1164,25 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
         }
         posSites.add(posSiteArrayList.get(tempNumber));
         return posSites;
+    }
+    //轮询找最近的小景点,10000内无则返回null
+    public Pos GetNearSmallPos(Double latitude){
+        Pos posSmallSites;
+        int tempNumber = 0;
+        double temp=10000;
+        for(int i = 0; i < posSmallArrayList.size(); i++) {
+            if(latitude - 0.2 < posSmallArrayList.get(i).getLatitude() && posSmallArrayList.get(i).getLatitude() < latitude + 0.2) {
+                if (temp > getDistance(car_longitude, car_latitude, posSmallArrayList.get(i).getLongitude(), posSmallArrayList.get(i).getLatitude())) {
+                    temp = getDistance(car_longitude, car_latitude, posSmallArrayList.get(i).getLongitude(), posSmallArrayList.get(i).getLatitude());
+                    tempNumber = i;
+                }
+            }
+        }
+        if(tempNumber == 0)
+            posSmallSites = null;
+        else
+            posSmallSites = posSmallArrayList.get(tempNumber);
+        return posSmallSites;
     }
     /*public PosSite GetNearPos(Double latitude){
         PosSite posSites = new PosSite();
@@ -1091,9 +1259,9 @@ public class MainActivity extends CheckPermissionsActivity implements INaviInfoC
             mAsrQuestion.cancel();
             mAsrQuestion.destroy();
         }
-        pin21.close();
+       /* pin21.close();
         pin3.close();
         pin17.close();
-        pin18.close();
+        pin18.close();*/
     }
 }

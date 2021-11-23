@@ -13,7 +13,7 @@ public class FadeInUtil {
                                       final float from, final float to,
                                       MusicDoneCallBack doneCallBack) {
         ValueAnimator animator = ValueAnimator.ofFloat(from, to);
-        animator.setDuration(6000); // 淡入时间
+        animator.setDuration(4000); // 淡入时间
         animator.setInterpolator(new LinearInterpolator());
         animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             public void onAnimationUpdate(ValueAnimator it) {
